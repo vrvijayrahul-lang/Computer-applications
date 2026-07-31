@@ -46,6 +46,9 @@ export default function Login() {
 
   useEffect(() => {
     if (BACKEND_MODE !== 'firebase') return
+    // Remember a successful seed locally — Firestore reads on the login screen
+    // are anonymous and can be denied by auth-required rules.
+    if (localStorage.getItem('cms_firebase_seeded') === '1') { setSeeded(true); return }
     let mounted = true
     isFirestoreSeeded().then((ok) => mounted && setSeeded(ok)).catch(() => {})
     return () => { mounted = false }
@@ -56,6 +59,7 @@ export default function Login() {
     setSeedError('')
     try {
       await seedFirestore()
+      localStorage.setItem('cms_firebase_seeded', '1')
       setSeeded(true)
     } catch (e) {
       setSeedError(e?.message || 'Could not load demo data. Make sure Authentication (Email/Password) and Firestore are enabled in the Firebase console.')

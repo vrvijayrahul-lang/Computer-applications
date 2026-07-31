@@ -1,7 +1,7 @@
 // One-time seeding of Firebase Auth + Firestore with the demo dataset.
 // Mirrors what mockDb does in demo mode (data/seed.js) so the deployed app is
-// usable the moment Firebase is wired up. Idempotent: skips data writes once
-// the `users` collection already has records.
+// usable the moment Firebase is wired up. Idempotent, and works under both
+// test-mode and auth-required Firestore rules.
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth'
 import {
   getFirestore, collection, getDocs, doc, setDoc, writeBatch,
@@ -9,11 +9,18 @@ import {
 import { app, firebaseEnabled } from '../config/firebase'
 import { buildSeed, USERS } from '../data/seed'
 
+// Best-effort check whether demo data is already in Firestore. An anonymous
+// read is denied under auth-required rules, so a failure is reported as
+// "not seeded" rather than crashing.
 export async function isFirestoreSeeded() {
   if (!firebaseEnabled) return false
   const db = getFirestore(app)
-  const snap = await getDocs(collection(db, 'users'))
-  return !snap.empty
+  try {
+    const snap = await getDocs(collection(db, 'users'))
+    return !snap.empty
+  } catch {
+    return false
+  }
 }
 
 // Creates the demo auth accounts and writes the demo collections to Firestore.
@@ -24,10 +31,9 @@ export async function seedFirestore() {
   const auth = getAuth(app)
   const db = getFirestore(app)
 
-  // Idempotency guard — don't duplicate data if this has already run.
-  if (await isFirestoreSeeded()) return { seeded: false, accounts: [] }
-
-  // 1) Auth accounts + `users/{uid}` profile docs (never store passwords in Firestore).
+  // 1) Auth accounts + `users/{uid}` profile docs (never store passwords in
+  //    Firestore). Creating the accounts signs the app in as the last-created
+  //    account, which also satisfies auth-required rules for the writes below.
   const accounts = []
   for (const u of USERS) {
     try {
@@ -40,12 +46,21 @@ export async function seedFirestore() {
       })
       accounts.push({ role: u.role, name: u.name, email: u.email, password: u.password })
     } catch (e) {
-      // Account already exists (e.g. partial seed) — link the existing one instead.
+      // Account already exists (e.g. a previous run) — link it instead.
       if (e.code !== 'auth/email-already-in-use') throw e
     }
   }
 
-  // 2) Data collections, written in batches of ≤400 (writeBatch limit is 500).
+  // 2) Idempotency guard — only seed the data collections when Firestore is
+  //    genuinely empty. Best-effort: if the read is denied we fall through and
+  //    write anyway; setDoc is idempotent, so a re-run only re-writes the same
+  //    demo records.
+  try {
+    const snap = await getDocs(collection(db, 'users'))
+    if (!snap.empty && accounts.length === 0) return { seeded: false, accounts }
+  } catch { /* rules may deny reads; proceed to write */ }
+
+  // 3) Data collections, written in batches of ≤400 (writeBatch limit is 500).
   const data = buildSeed()
   const docs = []
   for (const [col, list] of Object.entries(data)) {
