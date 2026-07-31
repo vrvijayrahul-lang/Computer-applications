@@ -33,11 +33,32 @@ realistic demo data and is fully usable immediately — no accounts to create.
    ```bash
    cp .env.example .env
    ```
-   Fill in the `VITE_FIREBASE_*` values.
-3. In Firestore (Production mode) enable **Authentication → Email/Password**
-   and create the collections from the data model below.
-4. Restart `npm run dev`. The app now uses real Firebase — the login screen
-   shows **"Connected to Firebase"**.
+   Fill in the `VITE_FIREBASE_*` values (API key, auth domain, project id, etc.).
+3. In the Firebase console:
+   - **Authentication → Sign-in method** → enable **Email/Password**.
+   - **Firestore Database** → create a database. Start with **test mode** rules
+     for development, then tighten them before going live (see below).
+4. Restart `npm run dev`. The login screen now shows **"Connected to Firebase"**.
+5. The first time you open the app, click **Load demo data** on the login screen.
+   This creates the demo Auth accounts and seeds all Firestore collections
+   (students, faculty, subjects, attendance, marks, …) from `src/data/seed.js`.
+   Once seeded, the quick-login cards appear — the same accounts as demo mode.
+
+> **Security rules** — test-mode rules allow open reads/writes for 30 days.
+> Before production, restrict access, for example:
+> ```js
+> rules_version = '2';
+> service cloud.firestore {
+>   match /databases/{database}/documents {
+>     match /{document=**} {
+>       allow read, write: if request.auth != null;
+>     }
+>   }
+> }
+> ```
+> Users sign in with Email/Password and the `users/{uid}` document carries their
+> `role` (`superadmin` / `hod` / `faculty` / `student`), which drives the portal
+> they can access. Role-based write restrictions are a good next step.
 
 > Demo mode uses `localStorage` and is seeded on first load. Use
 > **Reports → Reset demo** to start over. Data written in demo mode is local to

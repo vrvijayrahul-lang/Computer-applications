@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   GraduationCap, ShieldCheck, CalendarCheck, BookOpenText,
   ArrowRight, CheckCircle, FloppyDisk, Keyboard, Lightning, Lock,
-  EnvelopeSimple,
+  EnvelopeSimple, Database,
 } from '@phosphor-icons/react'
 import { useAuth } from '../context/AuthContext'
 import { ROLE_HOME, ROLE_LABEL } from '../config/nav'
 import { BACKEND_MODE } from '../config/firebase'
 import { Button } from '../components/ui/primitives'
+import { seedFirestore, isFirestoreSeeded } from '../services/seedFirestore'
 
 const DEMO_ACCOUNTS = [
   { role: 'superadmin', email: 'admin@unicore.dev', password: 'admin123', hint: 'Full control' },
@@ -29,6 +30,9 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [seeding, setSeeding] = useState(false)
+  const [seeded, setSeeded] = useState(false)
+  const [seedError, setSeedError] = useState('')
 
   const doLogin = async (e, em, pw) => {
     e?.preventDefault()
@@ -36,6 +40,28 @@ export default function Login() {
     const res = await login(em ?? email, pw ?? password)
     if (res.ok) navigate(ROLE_HOME[res.role] || '/')
     else setError(res.error || 'Sign-in failed')
+  }
+
+  const showQuickAccounts = BACKEND_MODE === 'demo' || (BACKEND_MODE === 'firebase' && seeded)
+
+  useEffect(() => {
+    if (BACKEND_MODE !== 'firebase') return
+    let mounted = true
+    isFirestoreSeeded().then((ok) => mounted && setSeeded(ok)).catch(() => {})
+    return () => { mounted = false }
+  }, [])
+
+  const doSeed = async () => {
+    setSeeding(true)
+    setSeedError('')
+    try {
+      await seedFirestore()
+      setSeeded(true)
+    } catch (e) {
+      setSeedError(e?.message || 'Could not load demo data. Make sure Authentication (Email/Password) and Firestore are enabled in the Firebase console.')
+    } finally {
+      setSeeding(false)
+    }
   }
 
   return (
@@ -102,7 +128,7 @@ export default function Login() {
                 Sign in to your {BACKEND_MODE === 'firebase' ? 'department' : 'demo'} workspace
               </p>
 
-              {BACKEND_MODE === 'demo' && (
+              {showQuickAccounts && (
                 <>
                   <div className="mt-6 grid grid-cols-2 gap-2">
                     {DEMO_ACCOUNTS.map((a) => (
@@ -116,6 +142,30 @@ export default function Login() {
                         <p className="text-[10px] text-zinc-400 dark:text-white/40 mt-0.5">{a.hint}</p>
                       </button>
                     ))}
+                  </div>
+                  <div className="flex items-center gap-3 my-6">
+                    <div className="h-px flex-1 bg-black/6 dark:bg-white/8" />
+                    <span className="text-[10px] uppercase tracking-[0.16em] text-zinc-400 dark:text-white/30">or sign in</span>
+                    <div className="h-px flex-1 bg-black/6 dark:bg-white/8" />
+                  </div>
+                </>
+              )}
+
+              {BACKEND_MODE === 'firebase' && !seeded && (
+                <>
+                  <div className="mt-6 rounded-2xl border border-black/8 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03] p-4">
+                    <p className="text-[12.5px] font-semibold text-zinc-800 dark:text-white/90 flex items-center gap-1.5">
+                      <Database size={14} className="text-accent-500" /> Your Firestore is empty
+                    </p>
+                    <p className="mt-1 text-[11.5px] text-zinc-500 dark:text-white/45 leading-relaxed">
+                      Load the demo dataset to create the sample accounts and records in this Firebase project — then use the quick-login cards to explore each role.
+                    </p>
+                    <Button variant="ghost" size="sm" className="mt-3 w-full !justify-center" onClick={doSeed} disabled={seeding}>
+                      {seeding ? 'Loading demo data…' : 'Load demo data'}
+                    </Button>
+                    {seedError && (
+                      <p className="mt-2 text-[11.5px] font-medium text-rose-500 dark:text-rose-glow leading-snug">{seedError}</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 my-6">
                     <div className="h-px flex-1 bg-black/6 dark:bg-white/8" />
@@ -171,7 +221,11 @@ export default function Login() {
           </div>
 
           <p className="mt-5 text-center text-[11.5px] text-zinc-400 dark:text-white/30 flex items-center justify-center gap-1.5">
-            <Keyboard size={13} /> Tip: use the quick-login cards above to explore each role
+            {showQuickAccounts ? (
+              <><Keyboard size={13} /> Tip: use the quick-login cards above to explore each role</>
+            ) : (
+              <><Database size={13} /> New Firebase project — load demo data to get started</>
+            )}
           </p>
         </div>
       </div>

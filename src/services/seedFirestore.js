@@ -1,0 +1,68 @@
+// One-time seeding of Firebase Auth + Firestore with the demo dataset.
+// Mirrors what mockDb does in demo mode (data/seed.js) so the deployed app is
+// usable the moment Firebase is wired up. Idempotent: skips data writes once
+// the `users` collection already has records.
+import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth'
+import {
+  getFirestore, collection, getDocs, doc, setDoc, writeBatch,
+} from 'firebase/firestore'
+import { app, firebaseEnabled } from '../config/firebase'
+import { buildSeed, USERS } from '../data/seed'
+
+export async function isFirestoreSeeded() {
+  if (!firebaseEnabled) return false
+  const db = getFirestore(app)
+  const snap = await getDocs(collection(db, 'users'))
+  return !snap.empty
+}
+
+// Creates the demo auth accounts and writes the demo collections to Firestore.
+// Returns { seeded, accounts } where accounts is the list usable for quick login.
+export async function seedFirestore() {
+  if (!firebaseEnabled) throw new Error('Firebase is not configured')
+
+  const auth = getAuth(app)
+  const db = getFirestore(app)
+
+  // Idempotency guard — don't duplicate data if this has already run.
+  if (await isFirestoreSeeded()) return { seeded: false, accounts: [] }
+
+  // 1) Auth accounts + `users/{uid}` profile docs (never store passwords in Firestore).
+  const accounts = []
+  for (const u of USERS) {
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, u.email, u.password)
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        profileId: u.profileId,
+      })
+      accounts.push({ role: u.role, name: u.name, email: u.email, password: u.password })
+    } catch (e) {
+      // Account already exists (e.g. partial seed) — link the existing one instead.
+      if (e.code !== 'auth/email-already-in-use') throw e
+    }
+  }
+
+  // 2) Data collections, written in batches of ≤400 (writeBatch limit is 500).
+  const data = buildSeed()
+  const docs = []
+  for (const [col, list] of Object.entries(data)) {
+    if (!list.length) continue
+    for (const d of list) docs.push({ col, id: d.id, data: d })
+  }
+  for (let i = 0; i < docs.length; i += 400) {
+    const batch = writeBatch(db)
+    for (const { col, id, data: row } of docs.slice(i, i + 400)) {
+      batch.set(doc(db, col, id), row)
+    }
+    await batch.commit()
+  }
+
+  // Seeding signs the last-created account into the default auth instance;
+  // sign back out so the visitor stays on the login screen.
+  await signOut(auth)
+
+  return { seeded: true, accounts }
+}
