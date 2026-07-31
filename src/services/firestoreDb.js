@@ -4,9 +4,13 @@ import {
   getFirestore, collection, doc, getDocs, getDoc,
   addDoc, updateDoc, deleteDoc, query, orderBy, where,
 } from 'firebase/firestore'
-import { app } from '../config/firebase'
+import { app, firebaseEnabled } from '../config/firebase'
 
-const db = getFirestore(app)
+// Never initialize Firestore when Firebase isn't configured: `app` is null in
+// demo mode, and `getFirestore(null)` throws at module load, blanking the app.
+// db.js only routes calls here when firebaseEnabled, so the null instance is
+// never used.
+const db = firebaseEnabled ? getFirestore(app) : null
 
 export async function list(colName, opts = {}) {
   const ref = collection(db, colName)
