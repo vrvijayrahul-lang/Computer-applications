@@ -5,6 +5,7 @@ import { Spinner } from './components/ui/primitives'
 import { ROLE_HOME } from './config/nav'
 
 import Login from './pages/Login'
+import SignUp from './pages/SignUp'
 import Profile from './pages/Profile'
 
 /* Admin */
@@ -56,6 +57,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<SignUp />} />
       <Route path="/" element={<RootRedirect />} />
 
       {/* Super Admin */}

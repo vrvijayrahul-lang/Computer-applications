@@ -124,6 +124,11 @@ export default function Login() {
                 </Button>
               </form>
 
+              <p className="mt-5 text-center text-[12px] text-zinc-500 dark:text-white/45">
+                New student?{' '}
+                <button onClick={() => navigate('/signup')} className="font-semibold text-accent-600 dark:text-accent-400 hover:underline">Create a student account</button>
+              </p>
+
               <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-zinc-400 dark:text-white/35">
                 <CheckCircle size={13} className="text-mint-400" /> Connected to Firebase
               </div>

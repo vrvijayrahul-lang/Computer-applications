@@ -2,7 +2,7 @@
 // env vars are configured (see config/firebase.js).
 import {
   getFirestore, collection, doc, getDocs, getDoc,
-  addDoc, updateDoc, deleteDoc, query, orderBy, where,
+  addDoc, updateDoc, deleteDoc, setDoc, query, orderBy, where,
 } from 'firebase/firestore'
 import { app, firebaseEnabled } from '../config/firebase'
 
@@ -50,6 +50,14 @@ export async function remove(colName, id) {
 export async function set(colName, id, data) {
   const ref = doc(db, colName, id)
   await updateDoc(ref, data)
+  return id
+}
+
+// Create-or-overwrite a document (setDoc). Used for account sign-up where the
+// doc may not exist yet — unlike `set`, which requires an existing doc.
+export async function upsert(colName, id, data) {
+  const ref = doc(db, colName, id)
+  await setDoc(ref, data)
   return id
 }
 
