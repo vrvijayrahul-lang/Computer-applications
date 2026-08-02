@@ -1,13 +1,12 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 import { app, firebaseEnabled } from '../config/firebase'
-import { demoLogin, getSession, clearSession } from '../services/mockDb'
 import { get as dbGet } from '../services/db'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => (firebaseEnabled ? null : getSession()))
+  const [user, setUser] = useState(null)
   const [ready, setReady] = useState(!firebaseEnabled)
   const [loading, setLoading] = useState(false)
 
@@ -41,24 +40,19 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (email, password) => {
     setLoading(true)
     try {
-      if (firebaseEnabled) {
-        const auth = getAuth(app)
-        const cred = await signInWithEmailAndPassword(auth, email, password)
-        setUser(await hydrateProfile(cred.user.uid, cred.user.email))
-      } else {
-        setUser(await demoLogin(email, password))
-      }
+      const auth = getAuth(app)
+      const cred = await signInWithEmailAndPassword(auth, email, password)
+      setUser(await hydrateProfile(cred.user.uid, cred.user.email))
       return { ok: true }
     } catch (e) {
       return { ok: false, error: e.code ? e.message.replace(/^auth\//, '') : e.message }
     } finally {
       setLoading(false)
     }
-  }, [firebaseEnabled, hydrateProfile])
+  }, [hydrateProfile])
 
   const logout = useCallback(() => {
     if (firebaseEnabled) signOut(getAuth(app)).catch(() => {})
-    clearSession()
     setUser(null)
   }, [])
 

@@ -1,6 +1,5 @@
 // One-time seeding of Firebase Auth + Firestore with the demo dataset.
-// Mirrors what mockDb does in demo mode (data/seed.js) so the deployed app is
-// usable the moment Firebase is wired up. Idempotent, and works under both
+// Sources records from data/seed.js. Idempotent, and works under both
 // test-mode and auth-required Firestore rules, on first run and on re-runs.
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import {

@@ -1,22 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   GraduationCap, ShieldCheck, CalendarCheck, BookOpenText,
-  ArrowRight, CheckCircle, FloppyDisk, Keyboard, Lightning, Lock,
-  EnvelopeSimple, Database,
+  ArrowRight, CheckCircle, Lightning, Lock, EnvelopeSimple,
 } from '@phosphor-icons/react'
 import { useAuth } from '../context/AuthContext'
-import { ROLE_HOME, ROLE_LABEL } from '../config/nav'
-import { BACKEND_MODE } from '../config/firebase'
+import { ROLE_HOME } from '../config/nav'
 import { Button } from '../components/ui/primitives'
-import { seedFirestore, isFirestoreSeeded } from '../services/seedFirestore'
-
-const DEMO_ACCOUNTS = [
-  { role: 'superadmin', email: 'admin@unicore.dev', password: 'admin123', hint: 'Full control' },
-  { role: 'hod', email: 'hod@unicore.dev', password: 'hod123', hint: 'Department head' },
-  { role: 'faculty', email: 'faculty@unicore.dev', password: 'faculty123', hint: 'Teach & assess' },
-  { role: 'student', email: 'student@unicore.dev', password: 'student123', hint: 'Learn & track' },
-]
 
 const FEATURES = [
   { icon: ShieldCheck, text: 'Role-based portals for Admin, HOD, Faculty & Students' },
@@ -30,42 +20,13 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [seeding, setSeeding] = useState(false)
-  const [seeded, setSeeded] = useState(false)
-  const [seedError, setSeedError] = useState('')
 
-  const doLogin = async (e, em, pw) => {
+  const doLogin = async (e) => {
     e?.preventDefault()
     setError('')
-    const res = await login(em ?? email, pw ?? password)
+    const res = await login(email, password)
     if (res.ok) navigate(ROLE_HOME[res.role] || '/')
     else setError(res.error || 'Sign-in failed')
-  }
-
-  const showQuickAccounts = BACKEND_MODE === 'demo' || (BACKEND_MODE === 'firebase' && seeded)
-
-  useEffect(() => {
-    if (BACKEND_MODE !== 'firebase') return
-    // Remember a successful seed locally — Firestore reads on the login screen
-    // are anonymous and can be denied by auth-required rules.
-    if (localStorage.getItem('cms_firebase_seeded') === '1') { setSeeded(true); return }
-    let mounted = true
-    isFirestoreSeeded().then((ok) => mounted && setSeeded(ok)).catch(() => {})
-    return () => { mounted = false }
-  }, [])
-
-  const doSeed = async () => {
-    setSeeding(true)
-    setSeedError('')
-    try {
-      await seedFirestore()
-      localStorage.setItem('cms_firebase_seeded', '1')
-      setSeeded(true)
-    } catch (e) {
-      setSeedError(e?.message || 'Could not load demo data. Make sure Authentication (Email/Password) and Firestore are enabled in the Firebase console.')
-    } finally {
-      setSeeding(false)
-    }
   }
 
   return (
@@ -129,57 +90,10 @@ export default function Login() {
 
               <h2 className="text-[24px] font-bold tracking-tight text-zinc-900 dark:text-white">Welcome back</h2>
               <p className="mt-1.5 text-[13px] text-zinc-500 dark:text-white/45">
-                Sign in to your {BACKEND_MODE === 'firebase' ? 'department' : 'demo'} workspace
+                Sign in to your department workspace
               </p>
 
-              {showQuickAccounts && (
-                <>
-                  <div className="mt-6 grid grid-cols-2 gap-2">
-                    {DEMO_ACCOUNTS.map((a) => (
-                      <button
-                        key={a.role}
-                        onClick={() => doLogin(null, a.email, a.password)}
-                        disabled={loading}
-                        className="rounded-2xl border border-black/8 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03] px-3 py-2.5 text-left hover:border-accent-500/50 hover:bg-accent-500/5 transition-all disabled:opacity-50"
-                      >
-                        <p className="text-[12px] font-bold text-zinc-800 dark:text-white/90">{ROLE_LABEL[a.role]}</p>
-                        <p className="text-[10px] text-zinc-400 dark:text-white/40 mt-0.5">{a.hint}</p>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-3 my-6">
-                    <div className="h-px flex-1 bg-black/6 dark:bg-white/8" />
-                    <span className="text-[10px] uppercase tracking-[0.16em] text-zinc-400 dark:text-white/30">or sign in</span>
-                    <div className="h-px flex-1 bg-black/6 dark:bg-white/8" />
-                  </div>
-                </>
-              )}
-
-              {BACKEND_MODE === 'firebase' && !seeded && (
-                <>
-                  <div className="mt-6 rounded-2xl border border-black/8 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03] p-4">
-                    <p className="text-[12.5px] font-semibold text-zinc-800 dark:text-white/90 flex items-center gap-1.5">
-                      <Database size={14} className="text-accent-500" /> Your Firestore is empty
-                    </p>
-                    <p className="mt-1 text-[11.5px] text-zinc-500 dark:text-white/45 leading-relaxed">
-                      Load the demo dataset to create the sample accounts and records in this Firebase project — then use the quick-login cards to explore each role.
-                    </p>
-                    <Button variant="ghost" size="sm" className="mt-3 w-full !justify-center" onClick={doSeed} disabled={seeding}>
-                      {seeding ? 'Loading demo data…' : 'Load demo data'}
-                    </Button>
-                    {seedError && (
-                      <p className="mt-2 text-[11.5px] font-medium text-rose-500 dark:text-rose-glow leading-snug">{seedError}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 my-6">
-                    <div className="h-px flex-1 bg-black/6 dark:bg-white/8" />
-                    <span className="text-[10px] uppercase tracking-[0.16em] text-zinc-400 dark:text-white/30">or sign in</span>
-                    <div className="h-px flex-1 bg-black/6 dark:bg-white/8" />
-                  </div>
-                </>
-              )}
-
-              <form onSubmit={(e) => doLogin(e)} className="space-y-4">
+              <form onSubmit={doLogin} className="mt-8 space-y-4">
                 <div>
                   <label className="label">Email</label>
                   <div className="relative">
@@ -211,26 +125,10 @@ export default function Login() {
               </form>
 
               <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-zinc-400 dark:text-white/35">
-                {BACKEND_MODE === 'demo' ? (
-                  <>
-                    <FloppyDisk size={13} /> Demo data stored locally in your browser
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle size={13} className="text-mint-400" /> Connected to Firebase
-                  </>
-                )}
+                <CheckCircle size={13} className="text-mint-400" /> Connected to Firebase
               </div>
             </div>
           </div>
-
-          <p className="mt-5 text-center text-[11.5px] text-zinc-400 dark:text-white/30 flex items-center justify-center gap-1.5">
-            {showQuickAccounts ? (
-              <><Keyboard size={13} /> Tip: use the quick-login cards above to explore each role</>
-            ) : (
-              <><Database size={13} /> New Firebase project — load demo data to get started</>
-            )}
-          </p>
         </div>
       </div>
     </div>

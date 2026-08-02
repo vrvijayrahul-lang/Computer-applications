@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app'
 
-// Populate these in a .env file to switch from the built-in demo store
-// to a real Firebase backend. See README.md -> "Connect Firebase".
+// Populate these in a .env file to connect to your Firebase project.
+// See README.md -> "Connect Firebase".
 const env = import.meta.env
 const firebaseConfig = {
   apiKey: env.VITE_FIREBASE_API_KEY,
@@ -12,8 +12,8 @@ const firebaseConfig = {
   appId: env.VITE_FIREBASE_APP_ID,
 }
 
+// The app is Firebase-only. `firebaseEnabled` still guards Firestore init so
+// a missing .env doesn't crash at module load (getFirestore(null) throws).
 export const firebaseEnabled = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId)
 
 export const app = firebaseEnabled ? initializeApp(firebaseConfig) : null
-
-export const BACKEND_MODE = firebaseEnabled ? 'firebase' : 'demo'

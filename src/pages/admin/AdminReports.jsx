@@ -3,7 +3,6 @@ import { DownloadSimple, Printer, Database, GraduationCap, ChalkboardTeacher, Cl
 import { PageHeader, Button, StatCard, Panel, Badge } from '../../components/ui/primitives'
 import { useCollection } from '../../hooks/useCollection'
 import { exportExcel, printReport } from '../../utils/export'
-import { backendMode, resetDemoData } from '../../services/db'
 import { useToast } from '../../context/ToastContext'
 import { AttendanceTrend, StudentsBySemester } from '../../components/dashboard/widgets'
 import { pct } from '../../utils/format'
@@ -61,15 +60,7 @@ export default function AdminReports() {
   )
 
   const backup = () => {
-    if (backendMode !== 'demo') { toast('Backup runs on the console for the Firebase backend', 'info'); return }
-    const raw = localStorage.getItem('cms_db_v2')
-    const blob = new Blob([raw || '{}'], { type: 'application/json' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `unicore-backup-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(a.href)
-    toast('Backup downloaded')
+    toast('Backup runs on the console for the Firebase backend', 'info')
   }
 
   return (
@@ -79,10 +70,7 @@ export default function AdminReports() {
         title="Reports & Data"
         description="Department analytics, exports and data management."
         actions={
-          <>
-            <Button variant="ghost" onClick={backup}><Database size={15} /> Backup data</Button>
-            <Button variant="danger" onClick={() => { if (confirm('Reset all demo data? This clears local records.')) { resetDemoData(); toast('Demo data reset', 'info') } }}>Reset demo</Button>
-          </>
+          <Button variant="ghost" onClick={backup}><Database size={15} /> Backup data</Button>
         }
       />
 
@@ -106,9 +94,9 @@ export default function AdminReports() {
           <ReportButton icon={Printer} title="Department report" desc="Printed summary — export as PDF via print" onClick={printDepartmentReport} />
         </div>
         <div className="mt-5 flex items-center gap-2">
-          <Badge tone={backendMode === 'demo' ? 'amber' : 'mint'}>{backendMode === 'demo' ? 'Demo backend' : 'Firebase'}</Badge>
+          <Badge tone="mint">Firebase</Badge>
           <span className="text-[11px] text-zinc-400 dark:text-white/35">
-            {backendMode === 'demo' ? 'Exports read from the local demo store.' : 'Exports read live Firestore collections.'}
+            Exports read live Firestore collections.
           </span>
         </div>
       </Panel>

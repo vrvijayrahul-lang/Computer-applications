@@ -1,4 +1,4 @@
-// Firestore adapter — same API shape as mockDb. Active only when Firebase
+// Firestore adapter — the single backend for the app. Active only when Firebase
 // env vars are configured (see config/firebase.js).
 import {
   getFirestore, collection, doc, getDocs, getDoc,

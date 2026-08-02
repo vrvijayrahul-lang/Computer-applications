@@ -91,7 +91,7 @@ export default function StudentAssignments() {
           <div>
             <label className="label">File name</label>
             <input className="input" placeholder="e.g. assignment_final.pdf" value={form.fileName} onChange={(e) => setForm((f) => ({ ...f, fileName: e.target.value }))} />
-            <p className="mt-1 text-[11px] text-zinc-400">In this demo build, attach by naming your file. File upload to Firebase Storage is wired when a backend is configured.</p>
+            <p className="mt-1 text-[11px] text-zinc-400">Attach by naming your file — direct upload to Firebase Storage isn't wired up yet.</p>
           </div>
           <div>
             <label className="label">Comment (optional)</label>
