@@ -129,7 +129,7 @@ export function StatCard({ label, value, icon: Icon, delta, deltaTone = 'up', hi
             <p className="mt-1.5 text-[28px] leading-none font-bold tracking-tight text-zinc-900 dark:text-white">{value}</p>
           </div>
           <div className={`h-11 w-11 rounded-xl flex items-center justify-center bg-gradient-to-br text-white shadow-lg shrink-0 ${accentChip[accent]}`}>
-            {icon && <Icon size={20} weight="bold" />}
+            {Icon && <Icon size={20} weight="bold" />}
           </div>
         </div>
         <div className="flex items-center gap-2.5">
