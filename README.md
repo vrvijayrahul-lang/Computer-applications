@@ -3,9 +3,9 @@
 A complete web application for the **Department of Computer Applications** with
 separate portals for **Super Admin, HOD, Faculty and Students**.
 
-Built with React + Vite + Tailwind CSS on the frontend, a pluggable data layer
-that runs on a zero-setup **local demo store** out of the box and switches to
-**Firebase** (Auth + Firestore) the moment you configure credentials.
+Built with React + Vite + Tailwind CSS on the frontend, backed by **Firebase**
+(Auth + Firestore). The app is **Firebase-only** — there is no local demo store,
+so configure the project first (see **Connect Firebase**).
 
 ## Quick start
 
@@ -14,17 +14,19 @@ npm install
 npm run dev
 ```
 
-Open the URL Vite prints (usually `http://localhost:5173`). The app auto-seeds
-realistic demo data and is fully usable immediately — no accounts to create.
+Open the URL Vite prints (usually `http://localhost:5173`). Log in with an
+existing account, or create a student account at `/signup`.
 
-### Demo logins (one click on the login screen)
+### Accounts
 
-| Role        | Email                 | Password    |
-| ----------- | --------------------- | ----------- |
-| Super Admin | `admin@unicore.dev`   | `admin123`  |
-| HOD         | `hod@unicore.dev`     | `hod123`    |
-| Faculty     | `faculty@unicore.dev` | `faculty123`|
-| Student     | `student@unicore.dev` | `student123`|
+| Who        | How they get an account |
+| ---------- | ----------------------- |
+| **Super Admin** | Provisioned manually. The account is **`vrvijayrahul@gmail.com`** (display name **VR Rahul**). Its `users/{uid}` document **must** carry `role: "superadmin"` — that is what gates the `/admin` portal. Take care not to delete it; if the account or its profile doc is ever lost, recreate the Auth user and re-write `users/{uid}` with `role: "superadmin"`. |
+| **Students** | Self-register at **`/signup`** (name, roll number, program, semester, section, email, password). This creates their Auth account, a `students/{uid}` record, and a `users/{uid}` doc (`role: "student"`, `profileId` = their student id). |
+| **HOD / Faculty** | Created by an admin in the **Firebase console → Authentication**, with a matching `users/{uid}` doc carrying `role: "hod"` or `"faculty"` (optionally `profileId` linking to a `faculty` record). |
+
+The `users/{uid}` document is the source of truth for role-based access
+(`superadmin` / `hod` / `faculty` / `student`).
 
 ## Connect Firebase
 
@@ -39,10 +41,11 @@ realistic demo data and is fully usable immediately — no accounts to create.
    - **Firestore Database** → create a database. Start with **test mode** rules
      for development, then tighten them before going live (see below).
 4. Restart `npm run dev`. The login screen now shows **"Connected to Firebase"**.
-5. The first time you open the app, click **Load demo data** on the login screen.
-   This creates the demo Auth accounts and seeds all Firestore collections
-   (students, faculty, subjects, attendance, marks, …) from `src/data/seed.js`.
-   Once seeded, the quick-login cards appear — the same accounts as demo mode.
+5. Log in with an existing account or create a student account at `/signup`.
+   To load the deterministic demo dataset (students, faculty, marks, …) for
+   development, seed it with a one-off script based on
+   `src/services/seedFirestore.js` (it creates sample Auth accounts and all
+   Firestore collections).
 
 > **Security rules** — test-mode rules allow open reads/writes for 30 days.
 > Before production, restrict access, for example:
@@ -60,24 +63,21 @@ realistic demo data and is fully usable immediately — no accounts to create.
 > `role` (`superadmin` / `hod` / `faculty` / `student`), which drives the portal
 > they can access. Role-based write restrictions are a good next step.
 
-> Demo mode uses `localStorage` and is seeded on first load. Use
-> **Reports → Reset demo** to start over. Data written in demo mode is local to
-> the browser.
-
 ## What's implemented
 
 - **Auth & RBAC** — role-based routing with a protected-route guard per portal.
 - **Super Admin** — dashboard, CRUD for Students, Faculty, Departments,
   Subjects, Notices, Events, Placements, weekly **Timetable**, Reports & data
-  export (Excel), demo backup/reset.
+  export (Excel/print).
 - **HOD** — dashboard (student/faculty stats, attendance overview), attendance
   session log, student/faculty management, projects, circulars, reports.
 - **Faculty** — dashboard (my subjects, performance), **mark attendance**
   (present/late/absent per session), **marks entry** (internal/practical/
   semester), assignments with submission tracking, leave requests.
-- **Student** — dashboard (attendance %, internal avg, fee status, drives),
-  attendance record, marks & results, weekly timetable, assignments (submit),
-  notices, fee statement, projects, placement updates.
+- **Student** — self-registration at `/signup`, dashboard (attendance %,
+  internal avg, fee status, drives), attendance record, marks & results, weekly
+  timetable, assignments (submit), notices, fee statement, projects, placement
+  updates.
 - **Analytics** — Recharts dashboards (attendance trend, semester distribution,
   status donuts) using a validated colorblind-safe palette with dark mode.
 - **Design** — Ethereal-glass aesthetic, double-bezel cards, fluid motion,
@@ -97,10 +97,10 @@ Collections: `users`, `students`, `faculty`, `departments`, `subjects`,
 ```
 src/
   components/  ui kit, layout, charts, dashboard widgets, timetable grid
-  pages/       admin/ hod/ faculty/ student/ + login, profile
+  pages/       admin/ hod/ faculty/ student/ + login, signup, profile
   context/     auth, theme, toasts
   hooks/       useCollection, useMe
-  services/    db (unified API), mockDb (demo store), firestoreDb (adapter)
+  services/    db (unified API), firestoreDb (adapter), seedFirestore
   config/      firebase init, navigation map
   data/        seed generator (deterministic demo data)
   utils/       formatting, Excel/print export
