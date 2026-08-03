@@ -146,7 +146,7 @@ export function StudentsBySemester() {
     return [1, 2, 3, 4, 5, 6].map((sem) => ({ semester: `Sem ${sem}`, count: counts[sem] }))
   }, [data])
   return (
-    <ChartPanel title="Students by semester" subtitle="Distribution across BCA semesters">
+    <ChartPanel title="Students by semester" subtitle="Distribution across semesters">
       <BarsChart data={rows} xKey="semester" series={[{ key: 'count', name: 'Students', color: '#6366f1' }]} />
     </ChartPanel>
   )

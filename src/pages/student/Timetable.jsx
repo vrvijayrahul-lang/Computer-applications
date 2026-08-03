@@ -16,7 +16,7 @@ export default function StudentTimetable() {
       <PageHeader
         eyebrow="Academics"
         title="My timetable"
-        description={`Weekly class schedule — BCA Sem ${me?.semester}, Section ${me?.section}`}
+        description={`Weekly class schedule — ${me?.program || 'B Com'} Sem ${me?.semester}, Section ${me?.section}`}
         actions={
           <span className="badge badge-indigo inline-flex items-center gap-1.5">
             <Clock size={13} weight="bold" /> {mine.length} sessions

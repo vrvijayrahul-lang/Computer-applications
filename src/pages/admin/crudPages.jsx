@@ -47,7 +47,7 @@ export function StudentsPage() {
         { name: 'rollNo', label: 'Roll number', required: true },
         { name: 'email', label: 'Email', type: 'email' },
         { name: 'phone', label: 'Phone' },
-        { name: 'program', label: 'Program', type: 'select', options: ['BCA', 'MCA'], fullWidth: true },
+        { name: 'program', label: 'Program', type: 'select', options: ['B Com'], fullWidth: true },
         { name: 'semester', label: 'Semester', type: 'select', options: SEM_OPTIONS },
         { name: 'section', label: 'Section', type: 'select', options: ['A', 'B'] },
         { name: 'admissionYear', label: 'Admission year', type: 'number' },
@@ -132,7 +132,7 @@ export function DepartmentsPage() {
       formFields={[
         { name: 'name', label: 'Department name', required: true },
         { name: 'code', label: 'Code', required: true },
-        { name: 'program', label: 'Program', type: 'select', options: ['BCA', 'MCA'] },
+        { name: 'program', label: 'Program', type: 'select', options: ['B Com'] },
         { name: 'semesters', label: 'Semesters', type: 'number' },
       ]}
     />

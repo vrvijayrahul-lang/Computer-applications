@@ -47,7 +47,7 @@ export default function StudentDashboard() {
           <span className="eyebrow mb-3">Student</span>
           <h1 className="text-2xl sm:text-[30px] font-bold tracking-tight text-zinc-900 dark:text-white">Hi, {me?.name?.split(' ')[0] || 'there'}</h1>
           <p className="mt-1.5 text-[13.5px] text-zinc-500 dark:text-white/45">
-            {me?.rollNo} · BCA Sem {me?.semester} · Section {me?.section}
+            {me?.rollNo} · {me?.program || 'B Com'} Sem {me?.semester} · Section {me?.section}
           </p>
         </div>
         <div className="flex gap-2.5">

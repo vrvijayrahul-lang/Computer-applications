@@ -6,14 +6,14 @@ import {
 import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/primitives'
 
-const PROGRAMS = ['BCA', 'MCA']
+const PROGRAMS = ['B Com']
 const SEMESTERS = [1, 2, 3, 4, 5, 6]
 const SECTIONS = ['A', 'B', 'C']
 
 export default function SignUp() {
   const { signUp, loading } = useAuth()
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', rollNo: '', program: 'BCA', semester: 1, section: 'A', email: '', password: '', confirm: '' })
+  const [form, setForm] = useState({ name: '', rollNo: '', program: 'B Com', semester: 1, section: 'A', email: '', password: '', confirm: '' })
   const [error, setError] = useState('')
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
