@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { getAuth, createUserWithEmailAndPassword, deleteUser, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
+import { getAuth, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, createUserWithEmailAndPassword, deleteUser, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 import { app, firebaseEnabled } from '../config/firebase'
-import { get as dbGet, upsert as dbUpsert } from '../services/db'
+import { get as dbGet, upsert as dbUpsert, list as dbList } from '../services/db'
 
 const AuthContext = createContext(null)
 
@@ -85,8 +85,56 @@ export function AuthProvider({ children }) {
     }
   }, [hydrateProfile])
 
+  // Google sign-in. First time a Google account appears, it is provisioned a
+  // users/{uid} doc. Role is resolved by uid first, then by matching the email
+  // against an existing account (so e.g. the superadmin keeps /admin), else it
+  // defaults to student.
+  const googleLogin = useCallback(async () => {
+    setLoading(true)
+    try {
+      const auth = getAuth(app)
+      const cred = await signInWithPopup(auth, new GoogleAuthProvider())
+      const u = cred.user
+      const uid = u.uid
+      const email = u.email || ''
+      let profile = null
+      try { profile = await dbGet('users', uid) } catch { /* ignore */ }
+      let role = profile?.role || 'student'
+      let profileId = profile?.profileId || null
+      let name = profile?.name || u.displayName || email.split('@')[0]
+      if (!profile) {
+        try {
+          const matches = await dbList('users', { where: [{ field: 'email', op: '==', eq: email }] })
+          if (matches.length) {
+            role = matches[0].role || 'student'
+            profileId = matches[0].profileId || null
+            name = matches[0].name || name
+          }
+        } catch { /* rules may block; keep defaults */ }
+        await dbUpsert('users', uid, { name, email, role, profileId })
+      }
+      setUser({ uid, email, name, role, profileId, backend: 'firebase' })
+      return { ok: true, role }
+    } catch (e) {
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return { ok: false, error: 'Sign-in cancelled' }
+      return { ok: false, error: e.code ? e.message.replace(/^auth\//, '') : e.message }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Sends Firebase's password-reset email for an address.
+  const resetPassword = useCallback(async (email) => {
+    try {
+      await sendPasswordResetEmail(getAuth(app), email)
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: e.code ? e.message.replace(/^auth\//, '') : e.message }
+    }
+  }, [])
+
   return (
-    <AuthContext.Provider value={{ user, ready, loading, login, signUp, logout }}>
+    <AuthContext.Provider value={{ user, ready, loading, login, googleLogin, signUp, resetPassword, logout }}>
       {children}
     </AuthContext.Provider>
   )
