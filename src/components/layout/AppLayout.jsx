@@ -6,6 +6,7 @@ import { useTheme } from '../../context/ThemeContext'
 import { NAV, ROLE_LABEL, ROLE_HOME } from '../../config/nav'
 import { useCollection } from '../../hooks/useCollection'
 import { Avatar } from '../ui/primitives'
+import PendingApproval from '../ui/PendingApproval'
 
 export default function AppLayout({ children }) {
   const { user, logout } = useAuth()
@@ -14,6 +15,10 @@ export default function AppLayout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const { data: notices } = useCollection('notices', { sortBy: 'date', sortDir: 'desc' })
+
+  // A self-registered faculty account that hasn't been approved yet sees the
+  // pending screen instead of any role dashboard.
+  if (user?.profileStatus === 'pending') return <PendingApproval onSignOut={logout} />
 
   const nav = NAV[user?.role] || []
   const home = ROLE_HOME[user?.role] || '/'

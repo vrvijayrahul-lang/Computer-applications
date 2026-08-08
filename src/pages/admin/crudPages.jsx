@@ -1,6 +1,9 @@
+import { Check } from '@phosphor-icons/react'
 import CrudPage from '../../components/ui/CrudPage'
-import { Avatar, Badge } from '../../components/ui/primitives'
+import { Avatar, Badge, Button } from '../../components/ui/primitives'
 import { useCollection } from '../../hooks/useCollection'
+import { useToast } from '../../context/ToastContext'
+import { update } from '../../services/db'
 import { fmtDate } from '../../utils/format'
 
 const SEM_OPTIONS = [1, 2, 3, 4, 5, 6]
@@ -66,18 +69,29 @@ export function StudentsPage() {
 /* ------------------------------- Faculty ------------------------------- */
 export function FacultyPage() {
   const faculty = useCollection('faculty')
+  const { toast } = useToast()
+  const pending = faculty.data.filter((f) => f.status === 'pending').length
+  const approve = async (f) => {
+    try {
+      await update('faculty', f.id, { status: 'active' })
+      toast(`${f.name} approved`)
+    } catch (e) {
+      toast(e.message || 'Could not approve account', 'error')
+    }
+  }
   return (
     <CrudPage
       collection="faculty"
       eyebrow="Academics"
       title="Faculty"
-      description="Teaching staff, qualifications and experience records."
+      description="Teaching staff, qualifications and experience records. New self-registered accounts appear as Pending until approved."
       exportName="faculty"
       searchKeys={['name', 'empId', 'email', 'designation']}
       statCards={[
         { label: 'Total', value: faculty.data.length, accent: 'indigo', hint: 'faculty' },
+        { label: 'Pending', value: pending, accent: 'amber', hint: 'awaiting approval' },
         { label: 'Professors', value: faculty.data.filter((f) => f.designation?.toLowerCase().includes('prof')).length, accent: 'violet', hint: 'senior' },
-        { label: 'Avg Experience', value: faculty.data.length ? Math.round(faculty.data.reduce((s, f) => s + (f.experience || 0), 0) / faculty.data.length) : 0, accent: 'amber', hint: 'years' },
+        { label: 'Avg Experience', value: faculty.data.length ? Math.round(faculty.data.reduce((s, f) => s + (f.experience || 0), 0) / faculty.data.length) : 0, accent: 'mint', hint: 'years' },
       ]}
       columns={[
         {
@@ -98,6 +112,17 @@ export function FacultyPage() {
         { key: 'experience', label: 'Experience', render: (f) => <span>{f.experience} yrs</span>, className: 'whitespace-nowrap' },
         { key: 'email', label: 'Email', render: (f) => <span className="text-zinc-500 dark:text-white/55">{f.email}</span> },
         { key: 'specialization', label: 'Specialization' },
+        { key: 'status', label: 'Status', sortable: false, render: (f) => (f.status === 'pending' ? <Badge tone="amber">Pending</Badge> : <Badge tone="mint">Active</Badge>) },
+        {
+          key: 'approve',
+          label: '',
+          sortable: false,
+          render: (f) => f.status === 'pending' ? (
+            <Button size="sm" className="!px-3 !py-1.5" onClick={() => approve(f)}>
+              <Check size={13} weight="bold" /> Approve
+            </Button>
+          ) : null,
+        },
       ]}
       formFields={[
         { name: 'name', label: 'Full name', required: true },
@@ -108,6 +133,7 @@ export function FacultyPage() {
         { name: 'qualification', label: 'Qualification' },
         { name: 'experience', label: 'Experience (years)', type: 'number' },
         { name: 'specialization', label: 'Specialization', fullWidth: true },
+        { name: 'status', label: 'Status', type: 'select', options: ['active', 'pending', 'inactive'] },
       ]}
     />
   )

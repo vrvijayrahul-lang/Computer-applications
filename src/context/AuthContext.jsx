@@ -13,16 +13,20 @@ export function AuthProvider({ children }) {
   const hydrateProfile = useCallback(async (uid, email) => {
     try {
       const profile = await dbGet('users', uid)
-      return {
-        uid,
-        email,
-        name: profile?.name || email?.split('@')[0],
-        role: profile?.role || 'student',
-        profileId: profile?.profileId || null,
-        backend: 'firebase',
+      const role = profile?.role || 'student'
+      const profileId = profile?.profileId || null
+      // A "pending" faculty account is gated at the app until an HOD/superadmin
+      // approves it, so we surface the linked profile doc's status here.
+      let profileStatus = 'active'
+      if (profileId && (role === 'faculty' || role === 'hod')) {
+        try {
+          const detail = await dbGet('faculty', profileId)
+          profileStatus = detail?.status || 'active'
+        } catch { /* keep active if the profile doc is missing or unreadable */ }
       }
+      return { uid, email, name: profile?.name || email?.split('@')[0], role, profileId, profileStatus, backend: 'firebase' }
     } catch {
-      return { uid, email, name: email?.split('@')[0], role: 'student', profileId: null, backend: 'firebase' }
+      return { uid, email, name: email?.split('@')[0], role: 'student', profileId: null, profileStatus: 'active', backend: 'firebase' }
     }
   }, [])
 
@@ -56,22 +60,46 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
-  // Student self-registration. Creates the Auth account, then the student
-  // profile and users doc (linked via profileId = uid). Rolls the auth account
-  // back if the profile writes fail so we don't leave an orphaned login.
-  const signUp = useCallback(async ({ name, rollNo, email, password, program, semester, section }) => {
+  // Student / faculty self-registration. Creates the Auth account, then the
+  // matching profile (students or faculty) and users doc (linked via
+  // profileId = uid). Rolls the auth account back if the profile writes fail
+  // so we don't leave an orphaned login.
+  const signUp = useCallback(async ({ role = 'student', name, email, password, ...profile }) => {
     setLoading(true)
     try {
       const auth = getAuth(app)
       const cred = await createUserWithEmailAndPassword(auth, email, password)
       const uid = cred.user.uid
       try {
-        await dbUpsert('students', uid, {
-          name, rollNo, email, program, semester: Number(semester), section,
-          admissionYear: new Date().getFullYear(), status: 'active',
-          phone: '', address: '', gender: '', dob: '',
-        })
-        await dbUpsert('users', uid, { name, email, role: 'student', profileId: uid })
+        if (role === 'faculty') {
+          await dbUpsert('faculty', uid, {
+            name,
+            email,
+            empId: profile.empId || '',
+            designation: profile.designation || '',
+            qualification: profile.qualification || '',
+            specialization: profile.specialization || '',
+            departmentId: 'dept_ca',
+            subjects: [],
+            experience: 0,
+            // New faculty accounts require HOD/superadmin approval before use.
+            status: 'pending',
+            phone: '', address: '', gender: '', dob: '',
+          })
+        } else {
+          await dbUpsert('students', uid, {
+            name,
+            rollNo: profile.rollNo,
+            email,
+            program: profile.program,
+            semester: Number(profile.semester),
+            section: profile.section,
+            admissionYear: new Date().getFullYear(),
+            status: 'active',
+            phone: '', address: '', gender: '', dob: '',
+          })
+        }
+        await dbUpsert('users', uid, { name, email, role, profileId: uid })
       } catch (e) {
         await deleteUser(cred.user).catch(() => {})
         throw e
