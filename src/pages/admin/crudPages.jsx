@@ -120,7 +120,7 @@ export function DepartmentsPage() {
       collection="departments"
       eyebrow="Academics"
       title="Departments"
-      description="Departments managed under UniCore."
+      description="Departments managed under PVKN Govt College (A) Chittoor."
       exportName="departments"
       searchKeys={['name', 'code', 'program']}
       columns={[

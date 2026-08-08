@@ -1,4 +1,4 @@
-# UniCore — College Management System
+# PVKN Govt College (A) Chittoor — College Management System
 
 A complete web application for the **Department of Computer Applications** with
 separate portals for **Super Admin, HOD, Faculty and Students**.

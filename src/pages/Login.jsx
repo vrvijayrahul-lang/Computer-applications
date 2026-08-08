@@ -67,7 +67,7 @@ export default function Login() {
               <GraduationCap size={24} weight="bold" />
             </div>
             <div>
-              <p className="text-[19px] font-bold tracking-tight text-zinc-900 dark:text-white leading-none">UniCore</p>
+              <p className="text-[19px] font-bold tracking-tight text-zinc-900 dark:text-white leading-none">PVKN Govt College (A) Chittoor</p>
               <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-zinc-400 dark:text-white/40">Campus OS</p>
             </div>
           </div>
@@ -78,7 +78,7 @@ export default function Login() {
               One portal for the entire department.
             </h1>
             <p className="mt-5 text-[15px] leading-relaxed text-zinc-500 dark:text-white/55">
-              Admissions to alumni, attendance to placements — UniCore keeps every workflow of the Computer Applications department in a single, secure workspace.
+              Admissions to alumni, attendance to placements — PVKN Govt College (A) Chittoor keeps every workflow of the Computer Applications department in a single, secure workspace.
             </p>
           </div>
 
@@ -94,7 +94,7 @@ export default function Login() {
           </div>
         </div>
 
-        <p className="text-[11.5px] text-zinc-400 dark:text-white/30">© {new Date().getFullYear()} UniCore · Computer Applications</p>
+        <p className="text-[11.5px] text-zinc-400 dark:text-white/30">© {new Date().getFullYear()} PVKN Govt College (A) Chittoor · Computer Applications</p>
       </div>
 
       {/* Form panel */}
@@ -107,7 +107,7 @@ export default function Login() {
                   <GraduationCap size={20} weight="bold" />
                 </div>
                 <div>
-                  <p className="font-bold text-[16px] tracking-tight text-zinc-900 dark:text-white leading-none">UniCore</p>
+                  <p className="font-bold text-[16px] tracking-tight text-zinc-900 dark:text-white leading-none">PVKN Govt College (A) Chittoor</p>
                   <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400 dark:text-white/40 mt-0.5">Campus OS</p>
                 </div>
               </div>

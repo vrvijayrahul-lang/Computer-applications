@@ -26,7 +26,7 @@ export default function AppLayout({ children }) {
           <GraduationCap size={20} weight="bold" />
         </div>
         <div className="min-w-0">
-          <p className="font-bold text-[16px] tracking-tight text-zinc-900 dark:text-white leading-none">UniCore</p>
+          <p className="font-bold text-[16px] tracking-tight text-zinc-900 dark:text-white leading-none">PVKN Govt College (A) Chittoor</p>
           <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-zinc-400 dark:text-white/40 truncate">Computer Applications</p>
         </div>
       </div>
