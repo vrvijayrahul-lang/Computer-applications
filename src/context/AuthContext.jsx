@@ -133,8 +133,17 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  // Re-hydrates the current user from users/{uid} after the profile is edited,
+  // so the sidebar/header name stays in sync with the profile document.
+  const refreshUser = useCallback(async () => {
+    try {
+      const u = getAuth(app).currentUser
+      if (u) setUser(await hydrateProfile(u.uid, u.email))
+    } catch { /* keep current user on failure */ }
+  }, [hydrateProfile])
+
   return (
-    <AuthContext.Provider value={{ user, ready, loading, login, googleLogin, signUp, resetPassword, logout }}>
+    <AuthContext.Provider value={{ user, ready, loading, login, googleLogin, signUp, resetPassword, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )
