@@ -98,7 +98,20 @@ src/
   config/      firebase init, navigation map
   data/        seed generator (deterministic demo data)
   utils/       formatting, Excel/print export
+public/        robots.txt, sitemap.xml, og.png (OpenGraph share image)
+scripts/       generate-og.ps1 (regenerate public/og.png, 1200x630)
 ```
+
+## SEO
+
+`index.html` ships the base meta set (description, keywords, canonical,
+Open Graph + Twitter cards) and a JSON-LD `EducationalOrganization` block.
+`src/components/Seo.jsx` keeps `<title>`, description, canonical and
+`og:*` tags in sync as the SPA navigates. The canonical / OG base URL is
+`https://computer-applications.vercel.app` by default — set `VITE_SITE_URL`
+in `.env` to use a custom domain. `public/robots.txt` blocks authenticated
+portal routes from crawlers; `public/sitemap.xml` references the production URL.
+Regenerate the share image with `powershell -ExecutionPolicy Bypass -File scripts/generate-og.ps1`.
 
 ## Roadmap
 

@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /hod/
+Disallow: /faculty/
+Disallow: /student/
+Disallow: /profile
+Disallow: /login
+
+Sitemap: https://computer-applications.vercel.app/sitemap.xml
