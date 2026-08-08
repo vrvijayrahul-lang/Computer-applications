@@ -47,21 +47,15 @@ The `users/{uid}` document is the source of truth for role-based access
    `src/services/seedFirestore.js` (it creates sample Auth accounts and all
    Firestore collections).
 
-> **Security rules** — test-mode rules allow open reads/writes for 30 days.
-> Before production, restrict access, for example:
-> ```js
-> rules_version = '2';
-> service cloud.firestore {
->   match /databases/{database}/documents {
->     match /{document=**} {
->       allow read, write: if request.auth != null;
->     }
->   }
-> }
+> **Security rules** — the repo ships a full role-based ruleset in
+> [`firestore.rules`](./firestore.rules). Role is derived from the signed-in
+> user's `users/{uid}` doc, and new **faculty** accounts are created
+> `status: "pending"` — they're gated until a **Super Admin / HOD** approves
+> them on the **Faculty** admin page. Deploy the rules with:
+> ```bash
+> firebase deploy --only firestore:rules
 > ```
-> Users sign in with Email/Password and the `users/{uid}` document carries their
-> `role` (`superadmin` / `hod` / `faculty` / `student`), which drives the portal
-> they can access. Role-based write restrictions are a good next step.
+> (Start with test-mode rules during development, then switch to `firestore.rules`.)
 
 ## What's implemented
 

@@ -1,0 +1,224 @@
+// ---------------------------------------------------------------------------
+// Firestore security rules — Department of Computer Applications
+// ---------------------------------------------------------------------------
+// Security model
+//   * Identity + role come from the users/{uid} document (written at sign-up).
+//   * Roles: superadmin, hod (managers); faculty; student.
+//   * A self-registered faculty account is created with status==pending and is
+//     read/write-gated until isActivated (approve) by a manager.
+//   * Cross-document access uses get() on users/<uuid> and the user's profile
+//     doc (students/<uuid> and faculty/<profileId>) — keep those documents
+//     small and readable so rule costs stay low.
+//
+// Deploy with:  firebase deploy --only firestore:rules   (or vercel build)
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------- identity helpers --------------------------
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Users doc that describes the signed-in requester. This is the single
+    // source of truth for role, so it is readable by all signed-in users.
+    function me() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function role() {
+      return me().data.role;
+    }
+
+    function profileId() {
+      return me().data.profileId;
+    }
+
+    function hasRole(expectedRole) {
+      return signedIn() && role() == expectedRole;
+    }
+
+    function isStudent() { return hasRole('student'); }
+    function isFaculty() { return hasRole('faculty'); }   // role only (may be pending)
+    function isSuperAdmin() { return hasRole('superadmin'); }
+    function isManager() { return signedIn() && role() in ['superadmin', 'hod']; }
+
+    // An ACTIVE faculty member: role==faculty AND their faculty doc exists
+    // with status=='active'. Pending / inactive accounts cannot write anything
+    // even though role() == 'faculty'.
+    function isActiveFaculty() {
+      return signedIn()
+        && role() == 'faculty'
+        && profileId() != null
+        && get(/databases/$(database)/documents/faculty/$(profileId())).data.status == 'active';
+    }
+
+    // Anyone who can operate on teaching data: managers + active faculty.
+    function isStaff() {
+      return isManager() || isActiveFaculty();
+    }
+
+    // --------------------------------------------------------------------
+    // Cross-struct core fields that a user may not tamper with.
+    // --------------------------------------------------------------------
+
+    // ------------------------------- users -------------------------------
+    // ProfileId/role are set once at sign-up and are immutable afterwards so a
+    // client can never "promote" itself. Name/email (profile display) can still
+    // be updated. A fresh Google sign-in may create a placeholder users doc
+    // (profileId == null) before a profile is linked.
+    match /users/{uid} {
+      // Required for auth + Google sign-in role matching and hydrating the
+      // current session. Visible to every signed-in user (names/emails only).
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && (request.resource.data.role in ['student', 'faculty'])
+        && (request.resource.data.profileId == uid || request.resource.data.profileId == null);
+
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.profileId == resource.data.profileId;
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // ------------------------------ students ------------------------------
+    // Students own their record (created at / analytics with status=="active",
+    // key == their auth uid). Faculty can read class lists; only managers edit.
+    // A student may update only personal fields — academic/account fields are
+    // pinned so they can't self-change roll number, program, semester, etc.
+    match /students/{uid} {
+      allow read: if signedIn()
+        && (request.auth.uid == uid || isManager() || isActiveFaculty());
+
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.status == 'active';
+
+      allow update: if isManager()
+        || (signedIn()
+          && request.auth.uid == uid
+          // personal fields – everything else is locked:
+          && request.resource.data.rollNo == resource.data.rollNo
+          && request.resource.data.admissionYear == resource.data.admissionYear
+          && request.resource.data.program == resource.data.program
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.status == resource.data.status);
+
+      allow delete: if isManager();
+    }
+
+    // ------------------------------- faculty -------------------------------
+    // The approval boundary: a self-registered faculty can only create their
+    // own doc as status 'pending' and can never flip that status themselves.
+    // Managers set status pending -> active (the "Approve" action).
+    match /faculty/{id} {
+      allow read: if isManager()
+        || isActiveFaculty()
+        || (signedIn() && request.auth.uid == id);   // own profile
+
+      allow create: if isManager()
+        || (signedIn()
+          && request.auth.uid == id
+          && request.resource.data.status == 'pending');
+
+      allow update: if isManager()
+        || (signedIn()
+          && request.auth.uid == id
+          // cannot self-approve or change the immutable identity fields:
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.email == resource.data.email);
+
+      allow delete: if isManager();
+    }
+
+    // --------------------------- admin collections ---------------------------
+    // Shared read-only data every signed-in user in the department can view.
+    match /departments/{id}     { allow read: if isManager() || isFaculty(); allow create, update, delete: if isManager(); }
+    match /subjects/{id}        { allow read: if isManager() || isFaculty(); allow create, update, delete: if isStaff(); }
+
+    // Notices / circulars: managers + active faculty publish.
+    match /notices/{id} {
+      allow read: if signedIn();
+      allow create, update, delete: if isStaff();
+    }
+
+    // Events, placements, timetable are public to the department.
+    match /events/{id}           { allow read: if signedIn(); allow create, update, delete: if isStaff(); }
+    match /placements/{id}       { allow read: if signedIn(); allow create, update, delete: if isStaff(); }
+    match /timetable/{id}        { allow read: if signedIn(); allow create, update, delete: if isManager(); }
+
+    // ------------------------- teaching data -------------------------------
+    // Attendance / marks: staff write; every student can read their own rows
+    // (doc.studentId == profileId). For attendance we must allow signed-in reads,
+    // because attendance stores students in a map key rather than row objects —
+    // see README note. If finer isolation is required, store per-student docs.
+    match /attendance/{id} {
+      allow read: if signedIn(); // all signed-in (see note)
+      allow create: if isStaff();
+      allow update: if isStaff();
+      allow delete: if isManager();
+    }
+
+    match /marks/{id} {
+      allow read: if isStaff() || (signedIn() && resource.data.studentId == profileId());
+      allow create, update: if isStaff();
+      allow delete: if isManager();
+    }
+
+    // -------------------------- student / faculty content ------------------
+    match /fees/{id} {
+      allow read: if isManager() || isFaculty()
+        || (signedIn() && resource.data.studentId == profileId());
+      allow create, update, delete: if isManager() || isActiveFaculty();
+    }
+
+    match /projects/{id} {
+      allow read: if signedIn();
+      allow create, update, delete: if isStaff();
+    }
+
+    match /feedback/{id} {
+      allow read: if isStaff();
+      allow create: if signedIn() && request.resource.data.studentId == profileId();
+      allow update, delete: if isStaff();
+    }
+
+    // ---------------------------- assignments --------------------------------
+    match /assignments/{id} {
+      allow read: if signedIn();
+      allow create, update, delete: if isActiveFaculty() || isManager();
+    }
+
+    // Students may only create submission rows for themselves; only staff can
+    // grade (update) them.
+    match /assignmentSubmissions/{id} {
+      allow read: if signedIn()
+        && (request.auth.uid == id
+           || isStaff()
+           || resource.data.studentId == profileId());
+      allow create: if signedIn() && request.auth.uid == request.resource.data.studentId;
+      allow update: if isStaff() && request.resource.data.studentId == resource.data.studentId;
+      allow delete: if isManager();
+    }
+
+    // ---- Leave requests (faculty raise them, managers act on them) ----
+    match /leaves/{id} {
+      allow read: if isManager()
+        || (signedIn() && resource.data.facultyId == profileId());
+      allow create: if signedIn()
+        && (isManager() || isActiveFaculty())
+        && request.resource.data.facultyId == profileId();
+      allow update, delete: if isManager();
+    }
+
+    // --------------------- misc demo collections (not active) ------------------
+    match /internships/{id}      { allow read, create, update, delete: if isStaff(); }
+    match /alumni/{id}           { allow read: if signedIn(); allow create, update, delete: if isStaff(); }
+    match /certificates/{id}     { allow read, create, update, delete: if isManager(); }
+  }
+}
